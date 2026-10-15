@@ -15,6 +15,10 @@ local selectedInterval = 300 -- Mặc định 5 phút (300 giây)
 local isRunning = false
 local connectionThread = nil
 
+-- Cấu hình hiển thị Beli & Fragment (Mặc định là Bật)
+local showBeli = true
+local showFragments = true
+
 -- Bảng định nghĩa màu sắc cho UI
 local ColorThemes = {
     ["Đen"] = {Main = Color3.fromRGB(20, 20, 25), Top = Color3.fromRGB(35, 35, 45), Text = Color3.fromRGB(255, 255, 255)},
@@ -38,10 +42,10 @@ MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = ColorThemes["Đen"].Main
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -160)
-MainFrame.Size = UDim2.new(0, 350, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 350, 0, 360)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Cho phép kéo thả GUI
+MainFrame.Draggable = true
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 10)
@@ -64,12 +68,24 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Parent = TopBar
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.Size = UDim2.new(0, 250, 1, 0)
+TitleLabel.Size = UDim2.new(0, 200, 1, 0)
 TitleLabel.Font = Enum.Font.SourceSansBold
 TitleLabel.Text = "📊 DungLevel Check"
 TitleLabel.TextColor3 = ColorThemes["Đen"].Text
 TitleLabel.TextSize = 17
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Chữ hiển thị phiên bản v1.0.3 nhỏ gọn
+local VersionLabel = Instance.new("TextLabel")
+VersionLabel.Parent = TopBar
+VersionLabel.BackgroundTransparency = 1
+VersionLabel.Position = UDim2.new(1, -115, 0, 0)
+VersionLabel.Size = UDim2.new(0, 75, 1, 0)
+VersionLabel.Font = Enum.Font.SourceSansItalic
+VersionLabel.Text = "v1.0.3"
+VersionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+VersionLabel.TextSize = 13
+VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
 
 -- Nút Thu Nhỏ / Phóng To (-)
 local MinimizeButton = Instance.new("TextButton")
@@ -95,10 +111,10 @@ ContentContainer.Active = true
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.Position = UDim2.new(0, 15, 0, 50)
 ContentContainer.Size = UDim2.new(1, -30, 1, -60)
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 260)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 310)
 ContentContainer.ScrollBarThickness = 4
 
--- 1. Ô nhập Webhook URL (Trống mặc định)
+-- 1. Ô nhập Webhook URL
 local WebhookLabel = Instance.new("TextLabel")
 WebhookLabel.Parent = ContentContainer
 WebhookLabel.BackgroundTransparency = 1
@@ -118,7 +134,7 @@ WebhookInput.Size = UDim2.new(1, 0, 0, 32)
 WebhookInput.ClearTextOnFocus = false
 WebhookInput.Font = Enum.Font.SourceSans
 WebhookInput.PlaceholderText = "Dán link Webhook vào đây..."
-WebhookInput.Text = "" -- Đã xoá Webhook cá nhân
+WebhookInput.Text = ""
 WebhookInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 WebhookInput.TextSize = 13
 WebhookInput.TextXAlignment = Enum.TextXAlignment.Left
@@ -127,11 +143,84 @@ local InputCorner = Instance.new("UICorner")
 InputCorner.CornerRadius = UDim.new(0, 6)
 InputCorner.Parent = WebhookInput
 
--- 2. Chọn Mốc Thời Gian
+-- 2. Chọn Tùy Chọn Hiển Thị (Beli & Fragment)
+local OptionsLabel = Instance.new("TextLabel")
+OptionsLabel.Parent = ContentContainer
+OptionsLabel.BackgroundTransparency = 1
+OptionsLabel.Position = UDim2.new(0, 0, 0, 60)
+OptionsLabel.Size = UDim2.new(1, 0, 0, 20)
+OptionsLabel.Font = Enum.Font.SourceSansBold
+OptionsLabel.Text = "Tùy Chọn Thông Tin Gửi:"
+OptionsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+OptionsLabel.TextSize = 14
+OptionsLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local OptionsHolder = Instance.new("Frame")
+OptionsHolder.Parent = ContentContainer
+OptionsHolder.BackgroundTransparency = 1
+OptionsHolder.Position = UDim2.new(0, 0, 0, 82)
+OptionsHolder.Size = UDim2.new(1, 0, 0, 30)
+
+local OptLayout = Instance.new("UIListLayout")
+OptLayout.Parent = OptionsHolder
+OptLayout.FillDirection = Enum.FillDirection.Horizontal
+OptLayout.Padding = UDim.new(0, 10)
+
+-- Nút Bật/Tắt Beli
+local BeliBtn = Instance.new("TextButton")
+BeliBtn.Parent = OptionsHolder
+BeliBtn.Size = UDim2.new(0, 150, 0, 28)
+BeliBtn.Font = Enum.Font.SourceSansBold
+BeliBtn.Text = "💵 Xem Beli: BẬT"
+BeliBtn.TextSize = 13
+BeliBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+BeliBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local BeliCorner = Instance.new("UICorner")
+BeliCorner.CornerRadius = UDim.new(0, 6)
+BeliCorner.Parent = BeliBtn
+
+BeliBtn.MouseButton1Click:Connect(function()
+    showBeli = not showBeli
+    if showBeli then
+        BeliBtn.Text = "💵 Xem Beli: BẬT"
+        BeliBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+    else
+        BeliBtn.Text = "💵 Xem Beli: TẮT"
+        BeliBtn.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
+    end
+end)
+
+-- Nút Bật/Tắt Fragment
+local FragBtn = Instance.new("TextButton")
+FragBtn.Parent = OptionsHolder
+FragBtn.Size = UDim2.new(0, 150, 0, 28)
+FragBtn.Font = Enum.Font.SourceSansBold
+FragBtn.Text = "🍇 Xem Tiền F: BẬT"
+FragBtn.TextSize = 13
+FragBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+FragBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local FragCorner = Instance.new("UICorner")
+FragCorner.CornerRadius = UDim.new(0, 6)
+FragCorner.Parent = FragBtn
+
+FragBtn.MouseButton1Click:Connect(function()
+    showFragments = not showFragments
+    if showFragments then
+        FragBtn.Text = "🍇 Xem Tiền F: BẬT"
+        FragBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+    else
+        FragBtn.Text = "🍇 Xem Tiền F: TẮT"
+        FragBtn.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
+    end
+end)
+
+-- 3. Chọn Mốc Thời Gian
 local TimeLabel = Instance.new("TextLabel")
 TimeLabel.Parent = ContentContainer
 TimeLabel.BackgroundTransparency = 1
-TimeLabel.Position = UDim2.new(0, 0, 0, 60)
+TimeLabel.Position = UDim2.new(0, 0, 0, 118)
 TimeLabel.Size = UDim2.new(1, 0, 0, 20)
 TimeLabel.Font = Enum.Font.SourceSansBold
 TimeLabel.Text = "Chọn Thời Gian Gửi:"
@@ -142,7 +231,7 @@ TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
 local TimeButtonHolder = Instance.new("Frame")
 TimeButtonHolder.Parent = ContentContainer
 TimeButtonHolder.BackgroundTransparency = 1
-TimeButtonHolder.Position = UDim2.new(0, 0, 0, 82)
+TimeButtonHolder.Position = UDim2.new(0, 0, 0, 140)
 TimeButtonHolder.Size = UDim2.new(1, 0, 0, 30)
 
 local TimeLayout = Instance.new("UIListLayout")
@@ -183,11 +272,11 @@ for _, info in ipairs(intervals) do
     end)
 end
 
--- 3. Chọn Màu Giao Diện (Theme Color)
+-- 4. Chọn Màu Giao Diện (Theme Color)
 local ThemeLabel = Instance.new("TextLabel")
 ThemeLabel.Parent = ContentContainer
 ThemeLabel.BackgroundTransparency = 1
-ThemeLabel.Position = UDim2.new(0, 0, 0, 118)
+ThemeLabel.Position = UDim2.new(0, 0, 0, 176)
 ThemeLabel.Size = UDim2.new(1, 0, 0, 20)
 ThemeLabel.Font = Enum.Font.SourceSansBold
 ThemeLabel.Text = "Chọn Màu Giao Diện UI:"
@@ -198,7 +287,7 @@ ThemeLabel.TextXAlignment = Enum.TextXAlignment.Left
 local ThemeScroll = Instance.new("ScrollingFrame")
 ThemeScroll.Parent = ContentContainer
 ThemeScroll.BackgroundTransparency = 1
-ThemeScroll.Position = UDim2.new(0, 0, 0, 140)
+ThemeScroll.Position = UDim2.new(0, 0, 0, 198)
 ThemeScroll.Size = UDim2.new(1, 0, 0, 32)
 ThemeScroll.CanvasSize = UDim2.new(0, 520, 0, 0)
 ThemeScroll.ScrollBarThickness = 2
@@ -234,12 +323,12 @@ for _, name in ipairs(themeNames) do
     end)
 end
 
--- 4. Nút Bật / Tắt Theo Dõi
+-- 5. Nút Bật / Tắt Theo Dõi
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = ContentContainer
 ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-ToggleButton.Position = UDim2.new(0, 0, 0, 185)
+ToggleButton.Position = UDim2.new(0, 0, 0, 245)
 ToggleButton.Size = UDim2.new(1, 0, 0, 38)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.Text = "▶ BẮT ĐẦU THEO DÕI"
@@ -250,47 +339,85 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 8)
 ToggleCorner.Parent = ToggleButton
 
--- Hàm lấy Level Blox Fruits
-local function getPlayerLevel()
+-- Hàm lấy Level, Beli, Fragments từ Blox Fruits
+local function getPlayerData()
     local data = LocalPlayer:FindFirstChild("Data")
+    local level = "Không xác định"
+    local beli = "Không xác định"
+    local fragments = "Không xác định"
+    
     if data then
-        local level = data:FindFirstChild("Level")
-        if level then
-            return level.Value
-        end
+        if data:FindFirstChild("Level") then level = data.Level.Value end
+        if data:FindFirstChild("Beli") then beli = data.Beli.Value end
+        if data:FindFirstChild("Fragments") then fragments = data.Fragments.Value end
     end
-    return "Không xác định"
+    
+    return level, beli, fragments
+end
+
+-- Định dạng số tiền cho đẹp (Ví dụ: 1000000 -> 1,000,000)
+local function formatNumber(num)
+    if type(num) ~= "number" then return tostring(num) end
+    local formatted = tostring(num)
+    while true do
+        local k
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if k == 0 then break end
+    end
+    return formatted
 end
 
 -- Hàm gửi thông tin qua Webhook
-local function sendToDiscord(username, level, statusText, targetWebhook)
+local function sendToDiscord(username, level, beli, fragments, statusText, targetWebhook)
     if not targetWebhook or targetWebhook == "" then return end
+
+    local fields = {
+        {
+            ["name"] = "👤 **Username:**",
+            ["value"] = tostring(username),
+            ["inline"] = true
+        },
+        {
+            ["name"] = "⭐ **Level Hiện Tại:**",
+            ["value"] = tostring(level),
+            ["inline"] = true
+        }
+    }
+
+    -- Nếu bật xem Beli
+    if showBeli then
+        table.insert(fields, {
+            ["name"] = "💵 **Beli:**",
+            ["value"] = formatNumber(beli),
+            ["inline"] = true
+        })
+    end
+
+    -- If enabled Fragments
+    if showFragments then
+        table.insert(fields, {
+            ["name"] = "🍇 **Fragments (Tiền F):**",
+            ["value"] = formatNumber(fragments),
+            ["inline"] = true
+        })
+    end
+
+    -- Trạng thái tin nhắn
+    table.insert(fields, {
+        ["name"] = "📌 **Trạng Thái:**",
+        ["value"] = tostring(statusText),
+        ["inline"] = false
+    })
 
     local data = {
         ["content"] = "",
         ["embeds"] = {
             {
-                ["title"] = "📊 **DungLevel Check - Blox Fruits**",
+                ["title"] = "📊 **DungLevel Check (v1.0.3) - Blox Fruits**",
                 ["color"] = 65280,
-                ["fields"] = {
-                    {
-                        ["name"] = "👤 **Username:**",
-                        ["value"] = tostring(username),
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "⭐ **Level Hiện Tại:**",
-                        ["value"] = tostring(level),
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "📌 **Trạng Thái:**",
-                        ["value"] = tostring(statusText),
-                        ["inline"] = false
-                    }
-                },
+                ["fields"] = fields,
                 ["footer"] = {
-                    ["text"] = "DungLevel Check • " .. os.date("%H:%M:%S - %d/%m/%Y")
+                    ["text"] = "DungLevel Check v1.0.3 • " .. os.date("%H:%M:%S - %d/%m/%Y")
                 }
             }
         }
@@ -322,7 +449,7 @@ MinimizeButton.MouseButton1Click:Connect(function()
         ContentContainer.Visible = false
         MinimizeButton.Text = "+"
     else
-        MainFrame:TweenSize(UDim2.new(0, 350, 0, 320), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+        MainFrame:TweenSize(UDim2.new(0, 350, 0, 360), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
         ContentContainer.Visible = true
         MinimizeButton.Text = "-"
     end
@@ -348,8 +475,8 @@ ToggleButton.MouseButton1Click:Connect(function()
             local username = LocalPlayer.Name
             local lastLevel = nil
             
-            local currentLevel = getPlayerLevel()
-            sendToDiscord(username, currentLevel, "🚀 Bắt đầu theo dõi từ DungLevel Check!", activeWebhook)
+            local currentLevel, currentBeli, currentFrag = getPlayerData()
+            sendToDiscord(username, currentLevel, currentBeli, currentFrag, "🚀 Bắt đầu theo dõi từ DungLevel Check v1.0.3!", activeWebhook)
             lastLevel = currentLevel
             
             while isRunning do
@@ -361,12 +488,12 @@ ToggleButton.MouseButton1Click:Connect(function()
                 
                 if not isRunning then break end
                 
-                currentLevel = getPlayerLevel()
+                currentLevel, currentBeli, currentFrag = getPlayerData()
                 if currentLevel ~= lastLevel then
-                    sendToDiscord(username, currentLevel, "🎉 Chúc mừng! Người chơi vừa lên cấp!", activeWebhook)
+                    sendToDiscord(username, currentLevel, currentBeli, currentFrag, "🎉 Chúc mừng! Người chơi vừa lên cấp!", activeWebhook)
                     lastLevel = currentLevel
                 else
-                    sendToDiscord(username, currentLevel, "⏰ Cập nhật định kỳ.", activeWebhook)
+                    sendToDiscord(username, currentLevel, currentBeli, currentFrag, "⏰ Cập nhật định kỳ.", activeWebhook)
                 end
             end
         end)
